@@ -12,6 +12,7 @@
 *.so
 *.dylib
 *.dll
+**/a.out.dSYM/
 
 # Fortran module files
 *.mod
@@ -140,3 +141,32 @@ FMIL/install_msvc/
 SuiteSparse/build_msvc/
 SuiteSparse/install_msvc/
 
+lpsolve/Makefile
+lpsolve/build/
+lpsolve/configure
+lpsolve/y.tab.h
+lpsolve/lp_rlp.h
+lpsolve/lp_rlp.c
+
+sqlite3/.deps/
+sqlite3/.libs/
+sqlite3/Makefile
+sqlite3/Makefile.in
+sqlite3/aclocal.m4
+sqlite3/build/
+sqlite3/compile
+sqlite3/config.guess
+sqlite3/config.sub
+sqlite3/configure
+sqlite3/depcomp
+sqlite3/install-sh
+sqlite3/libtool
+sqlite3/ltmain.sh
+sqlite3/missing
+sqlite3/sqlite3.pc
+
+sundials/build/
+sundials/build_msvc/
+
+trilinos-nox/build/
+trilinos-nox/build_msvc/

@@ -1,83 +1,132 @@
-/* External utility functions for Modelica packages
-   Modelica_Utilities.Internal
+/* ModelicaInternal.c - External functions for Modelica.Utilities
 
-   The functions are mostly non-portable. The following #define's are used
+   Copyright (C) 2002-2016, Modelica Association, DLR and ITI GmbH
+   All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/* The functions are mostly non-portable. The following #define's are used
    to define the system calls of the operating system
 
-    _WIN32         : System calls of Windows'95, Windows'NT
-                     (Note, that these system calls allow both '/' and '\'
-                     as directory separator for input arguments. As return
-                     argument '\' is used).
-                     All system calls are from the library libc.a.
-    _POSIX_        : System calls of POSIX
-    _MSC_VER       : Microsoft Visual C++
-    __GNUC__       : GNU C compiler
-    NO_FILE_SYSTEM : A file system is not present (e.g. on dSPACE or xPC).
-    MODELICA_EXPORT: Prefix used for function calls. If not defined, blank is used
-                     Useful definitions:
-                     - "static" that is all functions become static
-                       (useful if file is included with other C-sources for an
-                        embedded system)
-                     - "__declspec(dllexport)" if included in a DLL and the
-                       functions shall be visible outside of the DLL
+   _WIN32         : System calls of Windows'95, Windows'NT
+                    (Note, that these system calls allow both '/' and '\'
+                    as directory separator for input arguments. As return
+                    argument '\' is used).
+                    All system calls are from the library libc.a.
+   _POSIX_        : System calls of POSIX
+   _MSC_VER       : Microsoft Visual C++
+   __GNUC__       : GNU C compiler
+   NO_FILE_SYSTEM : A file system is not present (e.g. on dSPACE or xPC).
+   NO_PID         : Function getpid is not present (e.g. on dSPACE)
+   NO_TIME        : Function gettimeofday is not present (e.g. on dSPACE)
+   MODELICA_EXPORT: Prefix used for function calls. If not defined, blank is used
+                    Useful definitions:
+                    - "static" that is all functions become static
+                      (useful if file is included with other C-sources for an
+                       embedded system)
+                    - "__declspec(dllexport)" if included in a DLL and the
+                      functions shall be visible outside of the DLL
 
+   Release Notes:
+      Mar. 02, 2016: by Thomas Beutlich, ITI GmbH
+                     Fixed repeated opening of cached file in case of line miss in
+                     ModelicaStreams_openFileForReading (ticket #1939)
 
-    Release Notes:
-      Nov. 20, 2014, by Thomas Beutlich, ITI GmbH.
-        Fixed platform dependency of ModelicaInternal_readLine/_readFile (ticket #1580)
+      Dec. 10, 2015: by Martin Otter, DLR
+                     Added flags NO_PID and NO_TIME (ticket #1805)
 
-      Aug. 22, 2014, by Thomas Beutlich, ITI GmbH.
-        Fixed multi-threaded access of common/shared file cache (ticket #1556)
+      Oct. 27, 2015: by Thomas Beutlich, ITI GmbH
+                     Added nonnull attributes/annotations (ticket #1436)
 
-      Aug. 11, 2014, by Thomas Beutlich, ITI GmbH.
-        Increased cache size of opened files and made it thread-safe (ticket #1433)
-        Made getenv/putenv thread-safe for Visual Studio 2005 and later (ticket #1433)
+      Oct. 05, 2015: by Thomas Beutlich, ITI GmbH
+                     Added functions ModelicaInternal_getpid/_getTime from
+                     ModelicaRandom.c of https://github.com/DLR-SR/Noise
+                     (ticket #1662)
 
-      May 21, 2013, by Martin Otter, DLR.
-        Included the improvements from DS Lund:
-          - Changed implementation of print to do nothing in case of missing file-system.
-            Otherwise we just end up with an error message that is not written,
-            and the failure in itself is not sufficiently fatal to just stop
-          - Caching when reading from file
+      Nov. 20, 2014: by Thomas Beutlich, ITI GmbH
+                     Fixed platform dependency of ModelicaInternal_readLine/_readFile
+                     (ticket #1580)
 
-      March 26, 2013, by Martin Otter, DLR.
-        Changed type of variable valueStart from int to size_t (ticket #1032)
+      Aug. 22, 2014: by Thomas Beutlich, ITI GmbH
+                     Fixed multi-threaded access of common/shared file cache
+                     (ticket #1556)
 
-      Jan.   5, 2013: by Martin Otter, DLR.
-        Removed "static" declarations from the Modelica interface functions.
+      Aug. 11, 2014: by Thomas Beutlich, ITI GmbH
+                     Increased cache size of opened files and made it
+                     thread-safe (ticket #1433)
+                     Made getenv/putenv thread-safe for Visual Studio 2005 and
+                     later (ticket #1433)
 
-      Sept. 26, 2004: by Martin Otter, DLR.
-        Added missing implementations, merged code from previous ModelicaFiles
-        and clean-up of code.
+      May 21, 2013:  by Martin Otter, DLR
+                     Included the improvements from DS Lund (ticket #1104):
+                     - Changed implementation of print to do nothing in case of
+                       missing file-system. Otherwise we just end up with an
+                       error message that is not written, and the failure in
+                       itself is not sufficiently fatal to just stop.
+                     - Caching when reading from file
 
-      Sep.  9, 2004: by Dag Bruck, Dynasim AB.
-        Further implementation and clean-up of code.
+      Mar, 26, 2013: by Martin Otter, DLR
+                     Changed type of variable valueStart from int to size_t
+                     (ticket #1032)
 
-      Aug. 24, 2004: by Martin Otter, DLR.
-        Adapted to Dymola 5.3 with minor improvements.
+      Jan. 05, 2013: by Martin Otter, DLR
+                     Removed "static" declarations from the Modelica interface
+                     functions
 
-      Jan.  7, 2002: by Martin Otter, DLR.
-        First version implemented.
-        Only tested for _WIN32, but implemented all
-        functions also for _POSIX_, with the exception of
-        ModelicaInternal_getFullPath
+      Sep. 26, 2004: by Martin Otter, DLR
+                     Added missing implementations, merged code from previous
+                     ModelicaFiles and clean-up of code
 
+      Sep. 09, 2004: by Dag Bruck, Dynasim AB
+                     Further implementation and clean-up of code
 
-    Copyright (C) 2002-2014, Modelica Association and DLR.
+      Aug. 24, 2004: by Martin Otter, DLR
+                     Adapted to Dymola 5.3 with minor improvements
 
-
-   The content of this file is free software; it can be redistributed
-   and/or modified under the terms of the Modelica License 2, see the
-   license conditions and the accompanying disclaimer in file
-   Modelica/ModelicaLicense2.html or in Modelica.UsersGuide.ModelicaLicense2.
-
+      Jan. 07, 2002: by Martin Otter, DLR
+                     First version implemented:
+                     Only tested for _WIN32, but implemented all
+                     functions also for _POSIX_, with the exception of
+                     ModelicaInternal_getFullPath
 */
+
 #if !defined(MODELICA_EXPORT)
   #define MODELICA_EXPORT
 #endif
 
 #include <string.h>
 #include "ModelicaUtilities.h"
+
+/* The standard way to detect posix is to check _POSIX_VERSION,
+ * which is defined in <unistd.h>
+ */
+#if defined(__unix__) || defined(__linux__) || defined(__APPLE_CC__)
+  #include <unistd.h>
+#endif
+
+#if !defined(_POSIX_) && defined(_POSIX_VERSION)
+  #define _POSIX_ 1
+#endif
 
 static void ModelicaNotExistError(const char* name) {
   /* Print error message if a function is not implemented */
@@ -134,17 +183,6 @@ MODELICA_EXPORT void ModelicaInternal_setenv(const char* name, const char* value
 #include "uthash.h"
 #include "gconstructor.h"
 
-/* The standard way to detect posix is to check _POSIX_VERSION,
- * which is defined in <unistd.h>
- */
-#if defined(__unix__) || defined(__linux__) || defined(__APPLE_CC__)
-  #include <unistd.h>
-#endif
-
-#if !defined(_POSIX_) && defined(_POSIX_VERSION)
-  #define _POSIX_ 1
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -176,6 +214,62 @@ MODELICA_EXPORT void ModelicaInternal_setenv(const char* name, const char* value
   #include <sys/stat.h>
 #endif
 
+/*
+ * Non-null pointers and esp. null-terminated strings need to be passed to
+ * external functions.
+ *
+ * The following macros handle nonnull attributes for GNU C and Microsoft SAL.
+ */
+#if defined(__GNUC__)
+#define MODELICA_NONNULLATTR __attribute__((nonnull))
+#if defined(__GNUC_MINOR__) && (__GNUC__ > 3 && __GNUC_MINOR__ > 8)
+#define MODELICA_RETURNNONNULLATTR __attribute__((returns_nonnull))
+#else
+#define MODELICA_RETURNNONNULLATTR
+#endif
+#elif defined(__ATTR_SAL)
+#define MODELICA_NONNULLATTR
+#define MODELICA_RETURNNONNULLATTR _Ret_z_ /* _Ret_notnull_ and null-terminated */
+#else
+#define MODELICA_NONNULLATTR
+#define MODELICA_RETURNNONNULLATTR
+#endif
+#if !defined(__ATTR_SAL)
+#define _In_z_
+#define _Out_
+#endif
+
+MODELICA_EXPORT void ModelicaInternal_mkdir(_In_z_ const char* directoryName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_rmdir(_In_z_ const char* directoryName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT int ModelicaInternal_stat(_In_z_ const char* name) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_rename(_In_z_ const char* oldName,
+    _In_z_ const char* newName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_removeFile(_In_z_ const char* file) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_copyFile(_In_z_ const char* oldFile,
+    _In_z_ const char* newFile) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_readDirectory(_In_z_ const char* directory, int nFiles,
+    _Out_ const char** files) MODELICA_NONNULLATTR;
+MODELICA_EXPORT int ModelicaInternal_getNumberOfFiles(_In_z_ const char* directory) MODELICA_NONNULLATTR;
+MODELICA_EXPORT MODELICA_RETURNNONNULLATTR const char* ModelicaInternal_fullPathName(
+    _In_z_ const char* name) MODELICA_NONNULLATTR;
+MODELICA_EXPORT MODELICA_RETURNNONNULLATTR const char* ModelicaInternal_temporaryFileName(void);
+MODELICA_EXPORT void ModelicaStreams_closeFile(_In_z_ const char* fileName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_print(_In_z_ const char* string,
+    _In_z_ const char* fileName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT int ModelicaInternal_countLines(_In_z_ const char* fileName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_readFile(_In_z_ const char* fileName,
+    _Out_ const char* string[], size_t nLines) MODELICA_NONNULLATTR;
+MODELICA_EXPORT MODELICA_RETURNNONNULLATTR const char* ModelicaInternal_readLine(_In_z_ const char* fileName,
+    int lineNumber, _Out_ int* endOfFile) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_chdir(_In_z_ const char* directoryName) MODELICA_NONNULLATTR;
+MODELICA_EXPORT MODELICA_RETURNNONNULLATTR const char* ModelicaInternal_getcwd(int dummy);
+MODELICA_EXPORT void ModelicaInternal_getenv(_In_z_ const char* name, int convertToSlash,
+    _Out_ const char** content, _Out_ int* exist) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_setenv(_In_z_ const char* name,
+    _In_z_ const char* value, int convertFromSlash) MODELICA_NONNULLATTR;
+MODELICA_EXPORT void ModelicaInternal_getTime(_Out_ int* ms, _Out_ int* sec, _Out_ int* min, _Out_ int* hour,
+    _Out_ int* mday, _Out_ int* mon, _Out_ int* year) MODELICA_NONNULLATTR;
+
 #if PATH_MAX > 1024
 #define BUFFER_LENGTH PATH_MAX
 #else
@@ -189,23 +283,26 @@ typedef enum {
     FileType_SpecialFile   /* pipe, FIFO, device, etc. */
 } ModelicaFileType;
 
-
 /* Convert to Unix directory separators: */
 #if defined(_WIN32)
 static void ModelicaConvertToUnixDirectorySeparator(char* string) {
-  /* Convert to Unix directory separators */
+    /* Convert to Unix directory separators */
     char* c = string;
     while ( *c ) {
-        if ( *c == '\\' )  {*c = '/';}
+        if ( *c == '\\' )  {
+            *c = '/';
+        }
         c++;
     }
 }
 
 static void ModelicaConvertFromUnixDirectorySeparator(char* string) {
-  /* Convert from Unix directory separators */
+    /* Convert from Unix directory separators */
     char* c = string;
     while ( *c ) {
-        if ( *c == '/' )  {*c = '\\';}
+        if ( *c == '/' )  {
+            *c = '\\';
+        }
         c++;
     }
 }
@@ -214,16 +311,13 @@ static void ModelicaConvertFromUnixDirectorySeparator(char* string) {
   #define ModelicaConvertFromUnixDirectorySeparator(string) ;
 #endif
 
-
 /* --------------------- Modelica_Utilities.Internal --------------------------------- */
 
 MODELICA_EXPORT void ModelicaInternal_mkdir(const char* directoryName) {
-  /* Create directory */
-#if defined(__WATCOMC__)
+    /* Create directory */
+#if defined(__WATCOMC__) || defined(__LCC__)
     int result = mkdir(directoryName);
-#elif defined(__BORLANDC__)
-    int result = _mkdir(directoryName);
-#elif defined(_WIN32)
+#elif defined(__BORLANDC__) || defined(_WIN32)
     int result = _mkdir(directoryName);
 #elif defined(_POSIX_) || defined(__GNUC__)
     int result = mkdir(directoryName, S_IRUSR | S_IWUSR | S_IXUSR);
@@ -239,15 +333,11 @@ MODELICA_EXPORT void ModelicaInternal_mkdir(const char* directoryName) {
 }
 
 MODELICA_EXPORT void ModelicaInternal_rmdir(const char* directoryName) {
-  /* Remove directory */
-#if defined(__WATCOMC__)
+    /* Remove directory */
+#if defined(__WATCOMC__) || defined(__LCC__) || defined(_POSIX_) || defined(__GNUC__)
     int result = rmdir(directoryName);
-#elif defined(__BORLANDC__)
+#elif defined(__BORLANDC__) || defined(_WIN32)
     int result = _rmdir(directoryName);
-#elif defined(_WIN32)
-    int result = _rmdir(directoryName);
-#elif defined(_POSIX_) || defined(__GNUC__)
-    int result = rmdir(directoryName);
 #else
     int result = -1;
     ModelicaNotExistError("ModelicaInternal_rmdir");
@@ -260,7 +350,7 @@ MODELICA_EXPORT void ModelicaInternal_rmdir(const char* directoryName) {
 }
 
 MODELICA_EXPORT int ModelicaInternal_stat(const char* name) {
-  /* Inquire type of file */
+    /* Inquire type of file */
     ModelicaFileType type = FileType_NoFile;
 
 #if defined(__WATCOMC__) || defined(__BORLANDC__)
@@ -326,7 +416,7 @@ MODELICA_EXPORT int ModelicaInternal_stat(const char* name) {
 }
 
 MODELICA_EXPORT void ModelicaInternal_rename(const char* oldName, const char* newName) {
-  /* Changes the name of a file or of a directory */
+    /* Change the name of a file or of a directory */
     if ( rename(oldName, newName) != 0 ) {
         ModelicaFormatError("renaming \"%s\" to \"%s\" failed:\n%s",
             oldName, newName, strerror(errno));
@@ -334,7 +424,7 @@ MODELICA_EXPORT void ModelicaInternal_rename(const char* oldName, const char* ne
 }
 
 MODELICA_EXPORT void ModelicaInternal_removeFile(const char* file) {
-  /* Remove file */
+    /* Remove file */
     if ( remove(file) != 0 ) {
         ModelicaFormatError("Not possible to remove file \"%s\":\n%s",
             file, strerror(errno));
@@ -342,7 +432,7 @@ MODELICA_EXPORT void ModelicaInternal_removeFile(const char* file) {
 }
 
 MODELICA_EXPORT void ModelicaInternal_copyFile(const char* oldFile, const char* newFile) {
-  /* Copy file */
+    /* Copy file */
 #ifdef _WIN32
     const char* modeOld = "rb";
     const char* modeNew = "wb";
@@ -390,16 +480,18 @@ MODELICA_EXPORT void ModelicaInternal_copyFile(const char* oldFile, const char* 
             oldFile, newFile, strerror(errno));
         return;
     }
-    while ( (c = getc(fpOld)) != EOF ) putc(c, fpNew);
+    while ( (c = getc(fpOld)) != EOF ) {
+        putc(c, fpNew);
+    }
     fclose(fpOld);
     fclose(fpNew);
 }
 
 MODELICA_EXPORT void ModelicaInternal_readDirectory(const char* directory, int nFiles,
                                            const char** files) {
-  /* Get all file and directory names in a directory in any order
-     (must be very careful, to call closedir if an error occurs)
-  */
+    /* Get all file and directory names in a directory in any order
+       (must be very careful, to call closedir if an error occurs)
+    */
 #if defined(__WATCOMC__) || defined(__BORLANDC__) || defined(_WIN32) || defined(_POSIX_) || defined(__GNUC__)
     int errnoTemp;
     int iFiles  = 0;
@@ -475,7 +567,7 @@ MODELICA_EXPORT void ModelicaInternal_readDirectory(const char* directory, int n
 }
 
 MODELICA_EXPORT int ModelicaInternal_getNumberOfFiles(const char* directory) {
-  /* Get number of files and directories in a directory */
+    /* Get number of files and directories in a directory */
 #if defined(__WATCOMC__) || defined(__BORLANDC__) || defined(_WIN32) || defined(_POSIX_) || defined(__GNUC__)
     int nFiles = 0;
     int errnoTemp;
@@ -483,23 +575,29 @@ MODELICA_EXPORT int ModelicaInternal_getNumberOfFiles(const char* directory) {
     DIR* pdir;
 
     pdir = opendir(directory);
-    if ( pdir == NULL ) goto Modelica_ERROR;
+    if ( pdir == NULL ) {
+        goto Modelica_ERROR;
+    }
     errno = 0;
     while ( (pinfo = readdir(pdir)) != NULL ) {
         if ( (strcmp(pinfo->d_name, "." ) != 0) &&
-            (strcmp(pinfo->d_name, "..") != 0) ) {
+                (strcmp(pinfo->d_name, "..") != 0) ) {
             nFiles++;
         }
     }
     errnoTemp = errno;
     closedir(pdir);
-    if ( errnoTemp != 0 ) {errno = errnoTemp; goto Modelica_ERROR;}
+    if ( errnoTemp != 0 ) {
+        errno = errnoTemp;
+        goto Modelica_ERROR;
+    }
 
     return nFiles;
 
-Modelica_ERROR: ModelicaFormatError("Not possible to get number of files in \"%s\":\n%s",
-                    directory, strerror(errno));
-                return 0;
+Modelica_ERROR:
+    ModelicaFormatError("Not possible to get number of files in \"%s\":\n%s",
+        directory, strerror(errno));
+    return 0;
 #else
     ModelicaNotExistError("ModelicaInternal_getNumberOfFiles");
     return 0;
@@ -509,10 +607,10 @@ Modelica_ERROR: ModelicaFormatError("Not possible to get number of files in \"%s
 /* --------------------- Modelica_Utilities.Files ------------------------------------- */
 
 MODELICA_EXPORT const char* ModelicaInternal_fullPathName(const char* name) {
-  /* Get full path name of file or directory */
-    char* fullName;
+    /* Get full path name of file or directory */
 
 #if defined(_WIN32) || (_BSD_SOURCE || _XOPEN_SOURCE >= 500 || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED || (_POSIX_VERSION >= 200112L))
+    char* fullName;
     char localbuf[BUFFER_LENGTH];
 #if (_BSD_SOURCE || _XOPEN_SOURCE >= 500 || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED || _POSIX_VERSION >= 200112L)
     /* realpath availability: 4.4BSD, POSIX.1-2001. Using the behaviour of NULL: POSIX.1-2008 */
@@ -529,6 +627,7 @@ MODELICA_EXPORT const char* ModelicaInternal_fullPathName(const char* name) {
     strcpy(fullName, tempName);
     ModelicaConvertToUnixDirectorySeparator(fullName);
 #elif defined(_POSIX_)
+    char* fullName;
     char localbuf[BUFFER_LENGTH];
     /* No such system call in _POSIX_ available (except realpath above) */
     char* cwd = getcwd(localbuf, sizeof(localbuf));
@@ -544,6 +643,7 @@ MODELICA_EXPORT const char* ModelicaInternal_fullPathName(const char* name) {
     }
     strcat(fullName, name);
 #else
+    char* fullName = "";
     ModelicaNotExistError("ModelicaInternal_fullPathName");
 #endif
 
@@ -551,7 +651,7 @@ MODELICA_EXPORT const char* ModelicaInternal_fullPathName(const char* name) {
 }
 
 MODELICA_EXPORT const char* ModelicaInternal_temporaryFileName(void) {
-  /* Get full path name of a temporary */
+    /* Get full path name of a temporary */
     char* fullName;
 
     char* tempName = tmpnam(NULL);
@@ -570,7 +670,7 @@ MODELICA_EXPORT const char* ModelicaInternal_temporaryFileName(void) {
 
 /* Improved for caching of the open files */
 typedef struct FileCache {
-    char* fileName; /* Key = File name*/
+    char* fileName; /* Key = File name */
     FILE* fp /* File pointer */;
     int line;
     UT_hash_handle hh; /* Hashable structure */
@@ -579,10 +679,29 @@ typedef struct FileCache {
 static FileCache* fileCache = NULL;
 #if defined(_POSIX_)
 #include <pthread.h>
+#if defined(G_HAS_CONSTRUCTORS)
+static pthread_mutex_t m;
+G_DEFINE_CONSTRUCTOR(initializeMutex)
+static void initializeMutex(void) {
+    if (pthread_mutex_init(&m, NULL) != 0) {
+        ModelicaError("Initialization of mutex failed\n");
+    }
+}
+G_DEFINE_DESTRUCTOR(destroyMutex)
+static void destroyMutex(void) {
+    if (pthread_mutex_destroy(&m) != 0) {
+        ModelicaError("Destruction of mutex failed\n");
+    }
+}
+#else
 static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+#endif
 #define MUTEX_LOCK() pthread_mutex_lock(&m)
 #define MUTEX_UNLOCK() pthread_mutex_unlock(&m)
 #elif defined(_WIN32) && defined(G_HAS_CONSTRUCTORS)
+#if !defined(WIN32_LEAN_AND_MEAN)
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <Windows.h>
 static CRITICAL_SECTION cs;
 #ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
@@ -606,29 +725,29 @@ static void deleteCS(void) {
 #define MUTEX_UNLOCK()
 #endif
 
-static void CacheFileForReading(FILE* f, const char* fileName, int line) {
+static void CacheFileForReading(FILE* fp, const char* fileName, int line) {
     FileCache* fv;
-    if (fileName == 0) {
+    if (fileName == NULL) {
         /* Do not add, close file */
-        if (f) {
-            fclose(f);
+        if (fp != NULL) {
+            fclose(fp);
         }
         return;
     }
     MUTEX_LOCK();
     HASH_FIND(hh, fileCache, fileName, (unsigned)strlen(fileName), fv);
-    if (fv) {
-        fv->fp = f;
+    if (fv != NULL) {
+        fv->fp = fp;
         fv->line = line;
     }
     else {
         fv = (FileCache*)malloc(sizeof(FileCache));
-        if (fv) {
+        if (fv != NULL) {
             char* key = (char*)malloc((strlen(fileName) + 1)*sizeof(char));
-            if (key) {
+            if (key != NULL) {
                 strcpy(key, fileName);
                 fv->fileName = key;
-                fv->fp = f;
+                fv->fp = fp;
                 fv->line = line;
                 HASH_ADD_KEYPTR(hh, fileCache, key, (unsigned)strlen(key), fv);
             }
@@ -641,8 +760,8 @@ static void CloseCachedFile(const char* fileName) {
     FileCache* fv;
     MUTEX_LOCK();
     HASH_FIND(hh, fileCache, fileName, (unsigned)strlen(fileName), fv);
-    if (fv) {
-        if (fv->fp) {
+    if (fv != NULL) {
+        if (fv->fp != NULL) {
             fclose(fv->fp);
         }
         free(fv->fileName);
@@ -653,22 +772,40 @@ static void CloseCachedFile(const char* fileName) {
 }
 
 static FILE* ModelicaStreams_openFileForReading(const char* fileName, int line) {
-  /* Open text file for reading */
+    /* Open text file for reading */
     FILE* fp;
     int c = 1;
     FileCache* fv;
     MUTEX_LOCK();
     HASH_FIND(hh, fileCache, fileName, (unsigned)strlen(fileName), fv);
     /* Open file */
-    if (fv && fv->fp && line != 0 && line >= fv->line) {
+    if (fv != NULL) {
         /* Cached value */
-        line -= fv->line;
-        fp = fv->fp;
-        fv->fp = 0;
-        MUTEX_UNLOCK();
+        if (fv->fp != NULL) {
+            if (line != 0 && line >= fv->line) {
+                line -= fv->line;
+                fp = fv->fp;
+            }
+            else {
+                if ( fseek(fv->fp, 0L, SEEK_SET) == 0 ) {
+                    fp = fv->fp;
+                }
+                else {
+                    fclose(fv->fp);
+                    fp = NULL;
+                }
+            }
+            fv->fp = NULL;
+        }
+        else {
+            fp = NULL;
+        }
     }
     else {
-        MUTEX_UNLOCK();
+        fp = NULL;
+    }
+    MUTEX_UNLOCK();
+    if (fp == NULL) {
         fp = fopen(fileName, "r");
         if ( fp == NULL ) {
             ModelicaFormatError("Not possible to open file \"%s\" for reading:\n"
@@ -686,19 +823,19 @@ static FILE* ModelicaStreams_openFileForReading(const char* fileName, int line) 
 }
 
 MODELICA_EXPORT void ModelicaStreams_closeFile(const char* fileName) {
-  /* Close file */
+    /* Close file */
     CloseCachedFile(fileName); /* Closes it */
 }
 
 static FILE* ModelicaStreams_openFileForWriting(const char* fileName) {
-  /* Open text file for writing (with append) */
+    /* Open text file for writing (with append) */
     FILE* fp;
 
     /* Check fileName */
     if ( strlen(fileName) == 0 ) {
         ModelicaError("fileName is an empty string.\n"
             "Opening of file is aborted\n");
-      }
+    }
 
     /* Open file */
     ModelicaStreams_closeFile(fileName);
@@ -713,27 +850,32 @@ static FILE* ModelicaStreams_openFileForWriting(const char* fileName) {
 /* --------------------- Modelica_Utilities.Streams ----------------------------------- */
 
 MODELICA_EXPORT void ModelicaInternal_print(const char* string, const char* fileName) {
-  /* Write string to terminal or to file */
+    /* Write string to terminal or to file */
     if ( fileName[0] == '\0' ) {
         /* Write string to terminal */
-         ModelicaFormatMessage("%s\n", string);
+        ModelicaFormatMessage("%s\n", string);
     }
     else {
         /* Write string to file */
         FILE* fp = ModelicaStreams_openFileForWriting(fileName);
-        if ( fputs(string,fp) < 0 ) goto Modelica_ERROR2;
-        if ( fputs("\n",fp)   < 0 ) goto Modelica_ERROR2;
+        if ( fputs(string,fp) < 0 ) {
+            goto Modelica_ERROR2;
+        }
+        if ( fputs("\n",fp)   < 0 ) {
+            goto Modelica_ERROR2;
+        }
         fclose(fp);
         return;
 
-        Modelica_ERROR2: fclose(fp);
-                         ModelicaFormatError("Error when writing string to file \"%s\":\n"
-                            "%s\n", fileName, strerror(errno));
+Modelica_ERROR2:
+        fclose(fp);
+        ModelicaFormatError("Error when writing string to file \"%s\":\n"
+            "%s\n", fileName, strerror(errno));
     }
 }
 
 MODELICA_EXPORT int ModelicaInternal_countLines(const char* fileName) {
-  /* Get number of lines of a file */
+    /* Get number of lines of a file */
     int c;
     int nLines = 0;
     int start_of_line = 1;
@@ -747,14 +889,16 @@ MODELICA_EXPORT int ModelicaInternal_countLines(const char* fileName) {
             nLines++;
             start_of_line = 0;
         }
-        if (c == '\n') start_of_line = 1;
+        if (c == '\n') {
+            start_of_line = 1;
+        }
     }
     fclose(fp);
     return nLines;
 }
 
 MODELICA_EXPORT void ModelicaInternal_readFile(const char* fileName, const char* string[], size_t nLines) {
-  /* Read file into string vector string[nLines] */
+    /* Read file into string vector string[nLines] */
     FILE* fp = ModelicaStreams_openFileForReading(fileName, 0);
     char* line;
     size_t iLines;
@@ -770,7 +914,9 @@ MODELICA_EXPORT void ModelicaInternal_readFile(const char* fileName, const char*
         int c = fgetc(fp);
         int c2 = c;
         while ( c != '\n' && c != EOF ) {
-            if (lineLen < sizeof(localbuf)) localbuf[lineLen] = (char)c;
+            if (lineLen < sizeof(localbuf)) {
+                localbuf[lineLen] = (char)c;
+            }
             lineLen++;
             c2 = c;
             c = fgetc(fp);
@@ -813,7 +959,7 @@ MODELICA_EXPORT void ModelicaInternal_readFile(const char* fileName, const char*
 }
 
 MODELICA_EXPORT const char* ModelicaInternal_readLine(const char* fileName, int lineNumber, int* endOfFile) {
-  /* Read line lineNumber from file fileName */
+    /* Read line lineNumber from file fileName */
     FILE* fp = ModelicaStreams_openFileForReading(fileName, lineNumber - 1);
     char* line;
     int c, c2;
@@ -821,7 +967,9 @@ MODELICA_EXPORT const char* ModelicaInternal_readLine(const char* fileName, int 
     long offset;
     char localbuf[200]; /* To avoid fseek */
 
-    if (feof(fp)) goto END_OF_FILE;
+    if (feof(fp)) {
+        goto END_OF_FILE;
+    }
 
     /* Determine length of line lineNumber */
     offset  = ftell(fp);
@@ -829,26 +977,36 @@ MODELICA_EXPORT const char* ModelicaInternal_readLine(const char* fileName, int 
     c = fgetc(fp);
     c2 = c;
     while ( c != '\n' && c != EOF ) {
-        if (lineLen < sizeof(localbuf)) localbuf[lineLen] = (char)c;
+        if (lineLen < sizeof(localbuf)) {
+            localbuf[lineLen] = (char)c;
+        }
         lineLen++;
         c2 = c;
         c = fgetc(fp);
     }
-    if ( lineLen == 0 && c == EOF ) goto END_OF_FILE;
+    if ( lineLen == 0 && c == EOF ) {
+        goto END_OF_FILE;
+    }
 
     /* Read line lineNumber */
     if ( lineLen > 0 && c2 == '\r') {
         lineLen--;
     }
     line = ModelicaAllocateStringWithErrorReturn(lineLen);
-    if ( line == NULL ) goto Modelica_ERROR3;
+    if ( line == NULL ) {
+        goto Modelica_ERROR3;
+    }
 
     if (lineLen <= sizeof(localbuf)) {
         memcpy(line, localbuf, lineLen);
     }
     else {
-        if ( fseek(fp, offset, SEEK_SET) != 0 ) goto Modelica_ERROR3;
-        if ( fread(line, sizeof(char), lineLen, fp) != lineLen ) goto Modelica_ERROR3;
+        if ( fseek(fp, offset, SEEK_SET) != 0 ) {
+            goto Modelica_ERROR3;
+        }
+        if ( fread(line, sizeof(char), lineLen, fp) != lineLen ) {
+            goto Modelica_ERROR3;
+        }
         fgetc(fp); /* Read the EOF/new-line. */
     }
     CacheFileForReading(fp, fileName, lineNumber);
@@ -857,24 +1015,26 @@ MODELICA_EXPORT const char* ModelicaInternal_readLine(const char* fileName, int 
     return line;
 
     /* End-of-File or error */
-    END_OF_FILE: fclose(fp);
-                 CloseCachedFile(fileName);
-                 *endOfFile = 1;
-                 line = ModelicaAllocateString(0);
-                 return line;
+END_OF_FILE:
+    fclose(fp);
+    CloseCachedFile(fileName);
+    *endOfFile = 1;
+    line = ModelicaAllocateString(0);
+    return line;
 
-    Modelica_ERROR3: fclose(fp);
-                     CloseCachedFile(fileName);
-                     ModelicaFormatError("Error when reading line %i from file\n\"%s\":\n%s",
-                         lineNumber, fileName, strerror(errno));
-                     return "";
+Modelica_ERROR3:
+    fclose(fp);
+    CloseCachedFile(fileName);
+    ModelicaFormatError("Error when reading line %i from file\n\"%s\":\n%s",
+        lineNumber, fileName, strerror(errno));
+    return "";
 }
 
 /* --------------------- Modelica_Utilities.System ------------------------------------ */
 
 MODELICA_EXPORT void ModelicaInternal_chdir(const char* directoryName) {
-  /* Change current working directory */
-#if defined(__WATCOMC__)
+    /* Change current working directory */
+#if defined(__WATCOMC__) || defined(__LCC__)
     int result = chdir(directoryName);
 #elif defined(__BORLANDC__)
     int result = chdir(directoryName);
@@ -921,7 +1081,7 @@ MODELICA_EXPORT const char* ModelicaInternal_getcwd(int dummy) {
 }
 
 MODELICA_EXPORT void ModelicaInternal_getenv(const char* name, int convertToSlash, const char** content, int* exist) {
-  /* Get content of environment variable */
+    /* Get content of environment variable */
     char* result;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
     char* value;
@@ -952,7 +1112,9 @@ MODELICA_EXPORT void ModelicaInternal_getenv(const char* name, int convertToSlas
         result = ModelicaAllocateString(strlen(value));
 #endif
             strcpy(result, value);
-            if ( convertToSlash == 1 ) ModelicaConvertToUnixDirectorySeparator(result);
+            if ( convertToSlash == 1 ) {
+                ModelicaConvertToUnixDirectorySeparator(result);
+            }
             *exist = 1;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
             free(value);
@@ -982,8 +1144,9 @@ MODELICA_EXPORT void ModelicaInternal_setenv(const char* name, const char* value
     strcat(localbuf, "=");
     strcat(localbuf, value);
 
-    if ( convertFromSlash == 1 )
+    if ( convertFromSlash == 1 ) {
         ModelicaConvertFromUnixDirectorySeparator(&localbuf[strlen(name) + 1]);
+    }
 #endif
 
     /* Set environment variable */
@@ -1006,3 +1169,89 @@ MODELICA_EXPORT void ModelicaInternal_setenv(const char* name, const char* value
 }
 
 #endif
+
+/* Low-level time and pid functions */
+/* Some parts from: http://nadeausoftware.com/articles/2012/04/c_c_tip_how_measure_elapsed_real_time_benchmarking */
+
+#if !defined(NO_PID)
+  #if defined(__WATCOMC__) || defined(__BORLANDC__) || defined(_WIN32)
+    #include <process.h>
+  #elif defined(NO_FILE_SYSTEM) && (defined(_POSIX_) || defined(__GNUC__))
+    #include <unistd.h>
+    #include <sys/types.h>
+  #endif
+#endif
+
+#if !defined(NO_TIME)
+  #include <time.h>
+  #if defined(__WATCOMC__) || defined(__BORLANDC__) || defined(_WIN32)
+    #include <sys/timeb.h>
+  #elif defined(_POSIX_) || defined(__GNUC__)
+    #include <sys/time.h>
+  #endif
+#endif
+
+MODELICA_EXPORT int ModelicaInternal_getpid(void) {
+#if defined(NO_PID)
+    return 0;
+#else
+#if defined(_POSIX_) || defined(__GNUC__) || defined(__WATCOMC__) || defined(__BORLANDC__) || defined(__LCC__)
+    return getpid();
+#else
+    return _getpid();
+#endif
+#endif
+}
+
+MODELICA_EXPORT void ModelicaInternal_getTime(int* ms, int* sec, int* min, int* hour, int* mday, int* mon, int* year) {
+#if defined(NO_TIME)
+    *ms   = 0;
+    *sec  = 0;
+    *min  = 0;
+    *hour = 0;
+    *mday = 0;
+    *mon  = 0;
+    *year = 0;
+#else
+    struct tm* tlocal;
+    time_t calendarTime;
+    int ms0;
+
+    time( &calendarTime );               /* Retrieve sec time */
+    tlocal = localtime( &calendarTime ); /* Time fields in local time zone */
+
+    /* Get millisecond resolution depending on platform */
+#if defined(_WIN32)
+    {
+#if defined(__BORLANDC__)
+        struct timeb timebuffer;
+#else
+        struct _timeb timebuffer;
+#endif
+#if defined(__BORLANDC__) || defined(__LCC__)
+        ftime( &timebuffer );                     /* Retrieve ms time */
+#else
+        _ftime( &timebuffer );                    /* Retrieve ms time */
+#endif
+        ms0 = (int)(timebuffer.millitm);          /* Convert unsigned int to int */
+        tlocal->tm_mon  = tlocal->tm_mon + 1;     /* Correct for month starting at 1 */
+        tlocal->tm_year = tlocal->tm_year + 1900; /* Correct for 4-digit year */
+    }
+#else
+    {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        ms0 = tv.tv_usec/1000; /* Convert microseconds to milliseconds */
+    }
+#endif
+
+    /* Do not memcpy as you do not know which sizes are in the struct */
+    *ms = ms0;
+    *sec = tlocal->tm_sec;
+    *min = tlocal->tm_min;
+    *hour = tlocal->tm_hour;
+    *mday = tlocal->tm_mday;
+    *mon = tlocal->tm_mon;
+    *year = tlocal->tm_year;
+#endif
+}
